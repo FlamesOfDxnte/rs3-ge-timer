@@ -75,6 +75,7 @@
             border-radius: 3px;
             font-size: 11px;
             cursor: pointer;
+            width: 100%;
         }
         .reset-all-btn:hover {
             background-color: #5c1e1e;
@@ -178,7 +179,16 @@
     <div class="slots-container" id="slotsContainer"></div>
 
     <script>
-        let activeOffers = JSON.parse(localStorage.getItem('rs3_alt1_ge_timers')) || {};
+        // Check if data is missing, blank, or broken and force an empty object
+        let rawData = localStorage.getItem('rs3_alt1_ge_timers');
+        let activeOffers = {};
+        try {
+            if (rawData && rawData.trim() !== "" && rawData !== "undefined") {
+                activeOffers = JSON.parse(rawData);
+            }
+        } catch(e) {
+            activeOffers = {};
+        }
 
         if (window.alt1) {
             alt1.identifyAppUrl("ge_timer");
@@ -228,7 +238,7 @@
                 const offer = activeOffers[i];
                 const card = document.createElement('div');
                 card.className = 'slot-card';
-                if (offer) {
+                if (offer && offer.itemName) {
                     card.classList.add(offer.type === 'buy' ? 'active-buy' : 'active-sell');
                     card.innerHTML = `
                         <div class="slot-info">
@@ -271,19 +281,12 @@
         }
 
         function resetAllSlots() {
-            if (confirm("Are you sure you want to clear all 8 tracking slots?")) {
-                activeOffers = {};
-                localStorage.setItem('rs3_alt1_ge_timers', JSON.stringify(activeOffers));
-                renderSlots();
-            }
+            // Confirmation alert removed because Alt1 environments block browser pop-ups
+            activeOffers = {};
+            localStorage.setItem('rs3_alt1_ge_timers', JSON.stringify(activeOffers));
+            renderSlots();
         }
 
         function updateTimers() {
             const now = new Date().getTime();
             let stateChanged = false;
-            for (let i = 1; i <= 8; i++) {
-                const offer = activeOffers[i];
-                if (offer) {
-                    const diff = now - offer.startTime;
-                    const hours = Math.floor(diff / (1000 * 60 * 60));
-                    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
