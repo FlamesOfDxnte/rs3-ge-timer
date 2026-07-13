@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Alt1 GE Tracker - Self-Healing</title>
+    <title>Alt1 GE Tracker - Cache Force Fix</title>
     <script type="text/javascript" src="https://runeapps.org"></script>
     <style>
         body {
@@ -147,7 +147,7 @@
         }
         .clear-btn:hover { color: #f44336; }
         .empty-text {
-            color: #444;
+            color: #555;
             font-style: italic;
             font-size: 11px;
             line-height: 14px;
@@ -179,17 +179,16 @@
     <div class="slots-container" id="slotsContainer"></div>
 
     <script>
-        // CRITICAL DATA FIX: Force complete cache wipe if corrupt string configurations are discovered
+        // CACHE FORCE REBOOT: Renamed the storage key name to bypass the old corrupted Alt1 data cache
+        const STORAGE_KEY = 'rs3_ge_timers_v2_clean';
         let activeOffers = {};
+        
         try {
-            let testData = localStorage.getItem('rs3_alt1_ge_timers');
-            if (testData && testData !== "undefined" && testData.trim().startsWith('{')) {
-                activeOffers = JSON.parse(testData);
-            } else {
-                localStorage.setItem('rs3_alt1_ge_timers', '{}');
+            let cachedData = localStorage.getItem(STORAGE_KEY);
+            if (cachedData) {
+                activeOffers = JSON.parse(cachedData);
             }
         } catch(e) {
-            localStorage.setItem('rs3_alt1_ge_timers', '{}');
             activeOffers = {};
         }
 
@@ -239,7 +238,6 @@
             container.innerHTML = '';
             
             for (let i = 1; i <= 8; i++) {
-                // Ensure index checks don't drop out due to bad cache values
                 const offer = (activeOffers && typeof activeOffers === 'object') ? activeOffers[i] : null;
                 const card = document.createElement('div');
                 card.className = 'slot-card';
@@ -280,10 +278,18 @@
                 startTime: new Date().getTime(),
                 alarmTriggered: false
             };
-            localStorage.setItem('rs3_alt1_ge_timers', JSON.stringify(activeOffers));
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(activeOffers));
             document.getElementById('itemName').value = '';
             renderSlots();
         }
 
         function clearSlot(slotId) {
             if (activeOffers && activeOffers[slotId]) {
+                delete activeOffers[slotId];
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(activeOffers));
+            }
+            renderSlots();
+        }
+
+        function resetAllSlots() {
+            activeOffers = {};
