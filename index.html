@@ -1,145 +1,13 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Alt1 GE Tracker</title>
-    <!-- Include the official Alt1 API library -->
-    <script type="text/javascript" src="https://runeapps.org"></script>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #161616;
-            color: #dcdcdc;
-            margin: 0;
-            padding: 10px;
-            font-size: 13px;
-            /* Slim width optimized for Alt1's sidebar panels */
-            max-width: 320px; 
-            user-select: none;
-        }
-        h1 {
-            color: #ff9800;
-            text-align: center;
-            font-size: 16px;
-            margin: 5px 0 12px 0;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            border-bottom: 1px solid #333;
-            padding-bottom: 5px;
-        }
-        .controls {
-            background-color: #222;
-            padding: 10px;
-            border-radius: 4px;
-            margin-bottom: 12px;
-            border: 1px solid #3c3c3c;
-        }
-        .row {
-            display: flex;
-            gap: 6px;
-            margin-bottom: 8px;
-        }
-        .row:last-child {
-            margin-bottom: 0;
-        }
-        select, input, button {
-            padding: 6px;
-            border-radius: 3px;
-            border: 1px solid #444;
-            background-color: #2e2e2e;
-            color: #fff;
-            font-size: 12px;
-            box-sizing: border-box;
-        }
-        input { flex: 1; }
-        select { width: 85px; }
-        button {
-            background-color: #ff9800;
-            color: #000;
-            font-weight: bold;
-            cursor: pointer;
-            border: none;
-            flex: 1;
-        }
-        button:hover { background-color: #e68a00; }
-        
-        /* Compact Vertical List Layout for Alt1 Sidebar */
-        .slots-container {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-        .slot-card {
-            background-color: #1e1e1e;
-            border: 1px solid #333;
-            border-radius: 4px;
-            padding: 6px 10px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            position: relative;
-        }
-        .slot-card.active-buy { border-left: 4px solid #4caf50; }
-        .slot-card.active-sell { border-left: 4px solid #f44336; }
-        
-        .slot-info {
-            display: flex;
-            flex-direction: column;
-            max-width: 55%;
-        }
-        .slot-title {
-            font-size: 10px;
-            color: #888;
-            text-transform: uppercase;
-        }
-        .item-name {
-            font-size: 13px;
-            color: #fff;
-            font-weight: bold;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        .timer-side {
-            text-align: right;
-            display: flex;
-            flex-direction: column;
-            align-items: flex-end;
-        }
-        .timer-display {
-            font-size: 16px;
-            font-family: monospace;
-            color: #ffeb3b;
-            font-weight: bold;
-        }
-        .clear-btn {
-            background: none;
-            border: none;
-            color: #777;
-            font-size: 10px;
-            padding: 2px 0 0 0;
-            cursor: pointer;
-            text-decoration: underline;
-        }
-        .clear-btn:hover { color: #f44336; }
-        .empty-text {
-            color: #555;
-            font-style: italic;
-            font-size: 12px;
-        }
-    </style>
-</head>
 <body>
 
     <h1>GE Offer Tracker</h1>
     
     <div class="controls">
         <div class="row">
-            <input type="text" id="itemName" placeholder="Item Name (e.g., Bow of the Last Guardian)">
+            <input type="text" id="itemName" placeholder="Item Name (e.g., Praesul wand)">
         </div>
         <div class="row">
-            <select id="slotSelect"></select> <!-- Populated via JS -->
+            <select id="slotSelect"></select> 
             <select id="typeSelect">
                 <option value="buy">Buying</option>
                 <option value="sell">Selling</option>
@@ -148,17 +16,21 @@
         </div>
     </div>
 
+    <div class="global-actions">
+        <button class="reset-all-btn" onclick="resetAllSlots()">Reset All Slots</button>
+        <div id="updateBanner" class="update-banner" onclick="window.location.reload()">✨ Update Available! Click to Reload</div>
+    </div>
+
     <div class="slots-container" id="slotsContainer"></div>
 
     <script>
+        const APP_VERSION = "1.1.0"; 
         let activeOffers = JSON.parse(localStorage.getItem('rs3_alt1_ge_timers')) || {};
 
-        // Alt1 Integration: Identify the app context
         if (window.alt1) {
             alt1.identifyAppUrl("ge_timer");
         }
 
-        // Dynamically build slot dropdown
         const slotSelect = document.getElementById('slotSelect');
         for (let i = 1; i <= 8; i++) {
             let opt = document.createElement('option');
@@ -167,15 +39,57 @@
             slotSelect.appendChild(opt);
         }
 
+        function checkForUpdates() {
+            const currentUrl = window.location.href;
+            if (currentUrl.includes("github.io")) {
+                fetch(currentUrl)
+                    .then(response => response.text())
+                    .then(html => {
+                        const match = html.match(/const APP_VERSION = "([^"]+)"/);
+                        if (match && match !== APP_VERSION) {
+                            document.getElementById('updateBanner').style.display = 'block';
+                        }
+                    })
+                    .catch(err => console.log("Update check skipped"));
+            }
+        }
+
+        function playLimitAlarm() {
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                let osc1 = audioCtx.createOscillator();
+                let gain1 = audioCtx.createGain();
+                osc1.type = 'sine';
+                osc1.frequency.setValueAtTime(587.33, audioCtx.currentTime);
+                gain1.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                gain1.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+                osc1.connect(gain1);
+                gain1.connect(audioCtx.destination);
+                osc1.start();
+                osc1.stop(audioCtx.currentTime + 0.4);
+
+                setTimeout(() => {
+                    let osc2 = audioCtx.createOscillator();
+                    let gain2 = audioCtx.createGain();
+                    osc2.type = 'sine';
+                    osc2.frequency.setValueAtTime(880.00, audioCtx.currentTime);
+                    gain2.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                    gain2.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+                    osc2.connect(gain2);
+                    gain2.connect(audioCtx.destination);
+                    osc2.start();
+                    osc2.stop(audioCtx.currentTime + 0.5);
+                }, 150);
+            } catch(e) {}
+        }
+
         function renderSlots() {
             const container = document.getElementById('slotsContainer');
             container.innerHTML = '';
-            
             for (let i = 1; i <= 8; i++) {
                 const offer = activeOffers[i];
                 const card = document.createElement('div');
                 card.className = 'slot-card';
-                
                 if (offer) {
                     card.classList.add(offer.type === 'buy' ? 'active-buy' : 'active-sell');
                     card.innerHTML = `
@@ -190,7 +104,7 @@
                     `;
                 } else {
                     card.innerHTML = `
-                        <div class="slot-info"><span class="slot-title">Slot ${i}</span><span class="empty-text">Empty</span></div>
+                        <div class="slot-info"><span class="slot-title">Slot ${i}</span><span class="empty-text">Empty Slot</span></div>
                     `;
                 }
                 container.appendChild(card);
@@ -201,13 +115,12 @@
             const slot = slotSelect.value;
             const itemName = document.getElementById('itemName').value.trim() || "Unknown Item";
             const type = document.getElementById('typeSelect').value;
-            
             activeOffers[slot] = {
                 itemName: itemName,
                 type: type,
-                startTime: new Date().getTime()
+                startTime: new Date().getTime(),
+                alarmTriggered: false
             };
-            
             localStorage.setItem('rs3_alt1_ge_timers', JSON.stringify(activeOffers));
             document.getElementById('itemName').value = '';
             renderSlots();
@@ -219,8 +132,17 @@
             renderSlots();
         }
 
+        function resetAllSlots() {
+            if (confirm("Are you sure you want to clear all 8 tracking slots?")) {
+                activeOffers = {};
+                localStorage.setItem('rs3_alt1_ge_timers', JSON.stringify(activeOffers));
+                renderSlots();
+            }
+        }
+
         function updateTimers() {
             const now = new Date().getTime();
+            let stateChanged = false;
             for (let i = 1; i <= 8; i++) {
                 const offer = activeOffers[i];
                 if (offer) {
@@ -228,27 +150,29 @@
                     const hours = Math.floor(diff / (1000 * 60 * 60));
                     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
                     const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-                    
-                    const displayStr = 
-                        String(hours).padStart(2, '0') + ':' + 
-                        String(minutes).padStart(2, '0') + ':' + 
-                        String(seconds).padStart(2, '0');
-                        
+                    const displayStr = String(hours).padStart(2, '0') + ':' + String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
                     const timerEl = document.getElementById(`timer-${i}`);
                     if (timerEl) {
                         timerEl.innerText = displayStr;
                         if (hours >= 4) {
-                            timerEl.style.color = '#ff5722'; // Visual alert over 4 hours
+                            timerEl.style.color = '#ff5722'; 
+                            if (!offer.alarmTriggered) {
+                                playLimitAlarm();
+                                activeOffers[i].alarmTriggered = true;
+                                stateChanged = true;
+                            }
                         } else {
                             timerEl.style.color = '#ffeb3b';
                         }
                     }
                 }
             }
+            if (stateChanged) localStorage.setItem('rs3_alt1_ge_timers', JSON.stringify(activeOffers));
         }
 
         renderSlots();
         setInterval(updateTimers, 1000);
+        setTimeout(checkForUpdates, 3000);
     </script>
 </body>
 </html>
